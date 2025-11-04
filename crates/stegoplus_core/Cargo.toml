@@ -1,0 +1,20 @@
+[package]
+name = "stegoplus_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "stegoplus_core"
+path = "src/lib.rs"
+
+[dependencies]
+aes-gcm = "0.10"
+rand = "0.8"
+image = "0.25"
+zstd = "0.13"
+argon2 = "0.5"         # for Argon2id (key derivation)
+zeroize = "1.7"
+anyhow = "1.0"
+thiserror = "1.0"
+scrypt = "0.11"
+crc32fast = "1"

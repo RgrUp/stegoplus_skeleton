@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/stegoplus_core",
+    "apps/stegoplus_cli"
+]
+resolver = "2"

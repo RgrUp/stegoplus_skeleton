@@ -1,0 +1,10 @@
+[package]
+name = "stegoplus_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stegoplus_core = { path = "../../crates/stegoplus_core" }
+clap = { version = "4.5", features = ["derive"] }
+indicatif = "0.17"
+anyhow = "1.0"
