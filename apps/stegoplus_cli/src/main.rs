@@ -1,62 +1,85 @@
-use std::fs;
-use stegoplus_core::{
-    encrypt_aes_gcm_scrypt, decrypt_aes_gcm_scrypt, Encrypted,
-    make_header_and_payload, parse_header_and_payload,
-    embed_payload_into_png, extract_payload_from_png,
-};
-use stegoplus_core::header::Header; // for Header::from_bytes
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 4 {
-        eprintln!("Usage:\n  stegoplus_cli hide <cover.png> <passphrase>\n  stegoplus_cli reveal <stego.png> <passphrase>");
-        std::process::exit(1);
-    }
+#[derive(Parser)]
+#[command(name = "stegoplus_cli", version, about = "StegoPlus CLI")]
+struct Args {
+    #[command(subcommand)]
+    cmd: Cmd,
+}
 
-    match args[1].as_str() {
-        "hide" => {
-            let cover = fs::read(&args[2]).expect("read cover.png");
-            let pass = args[3].as_bytes();
+#[derive(Subcommand)]
+enum Cmd {
+    /// Analyze a cover image and report max embedding capacity
+    Analyze {
+        /// Path to a cover image (e.g., PNG/BMP)
+        cover: PathBuf,
+    },
 
-            let msg = b"hello from cli"; // TODO: replace with stdin or file input
-            let enc: Encrypted = encrypt_aes_gcm_scrypt(msg, pass).expect("encrypt");
+    /// Hide a payload inside a cover image
+    Hide {
+        cover: PathBuf,
+        /// Passphrase (or later: --pass/--key-file)
+        passphrase: String,
+        /// Optional output file
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Optional payload file (else read from stdin later)
+        #[arg(long)]
+        msg_file: Option<PathBuf>,
+    },
 
-            // salt(16) | nonce(12) | ct||tag
-            let mut blob = Vec::with_capacity(28 + enc.ciphertext_and_tag.len());
-            blob.extend_from_slice(&enc.salt);
-            blob.extend_from_slice(&enc.nonce);
-            blob.extend_from_slice(&enc.ciphertext_and_tag);
+    /// Reveal an embedded payload from a stego image
+    Reveal {
+        stego: PathBuf,
+        passphrase: String,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+}
 
-            let framed = make_header_and_payload(&blob);
-            let stego = embed_payload_into_png(&cover, &framed).expect("embed");
-            fs::write("output.png", stego).expect("write output.png");
-            println!("Wrote output.png");
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    match args.cmd {
+        Cmd::Analyze { cover } => {
+            let a = stegoplus_core::stego::analyze_cover(&cover)?;
+            println!(
+                "Pixels: {pixels}\nCapacity: {cap} bytes (using {bpp} LSBs per pixel in R/B)",
+                pixels = a.pixels,
+                cap = a.capacity_bytes,
+                bpp = a.bits_per_pixel_used
+            );
+            Ok(())
         }
 
-        "reveal" => {
-            let stego_png = fs::read(&args[2]).expect("read stego.png");
-            let pass = args[3].as_bytes();
-
-            // 1) Extract just the 14-byte header, then parse HEADER ONLY
-            let header_bytes = extract_payload_from_png(&stego_png, 14).expect("extract header");
-            let header = Header::from_bytes(&header_bytes[..]).expect("parse header only");
-
-            // 2) Now extract the full frame (header + payload)
-            let total = 14 + header.len as usize;
-            let full_frame = extract_payload_from_png(&stego_png, total).expect("extract full");
-            let (_hdr2, payload) = parse_header_and_payload(&full_frame).expect("parse full frame");
-
-            // 3) Deserialize Encrypted: salt(16) | nonce(12) | ct||tag
-            let salt = <[u8; 16]>::try_from(&payload[0..16]).unwrap();
-            let nonce = <[u8; 12]>::try_from(&payload[16..28]).unwrap();
-            let ct = payload[28..].to_vec();
-            let enc = Encrypted { salt, nonce, ciphertext_and_tag: ct };
-
-            // 4) Decrypt
-            let pt = decrypt_aes_gcm_scrypt(&enc, pass).expect("decrypt");
-            println!("Message: {}", String::from_utf8_lossy(&pt));
+                Cmd::Hide { cover, passphrase, out, msg_file } => {
+            let out_path = out.unwrap_or_else(|| {
+                let mut p = cover.clone();
+                // e.g., cover.png -> cover.stego.png
+                let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("out");
+                p.set_file_name(format!("{stem}.stego.png"));
+                p
+            });
+            let payload = msg_file
+                .ok_or_else(|| anyhow::anyhow!("--msg-file <path> is required for now"))?;
+            // compress level 6 is a sensible default
+            stegoplus_core::stego::hide_file(&cover, &out_path, passphrase.as_bytes(), &payload, 6)?;
+            println!("Wrote {}", out_path.display());
+            Ok(())
         }
 
-        _ => eprintln!("Unknown command"),
+        Cmd::Reveal { stego, passphrase, out } => {
+            let out_path = out.unwrap_or_else(|| {
+                let mut p = stego.clone();
+                p.set_file_name("revealed.bin");
+                p
+            });
+            stegoplus_core::stego::reveal_file(&stego, passphrase.as_bytes(), &out_path)?;
+            println!("Revealed → {}", out_path.display());
+            Ok(())
+        }
+
     }
 }

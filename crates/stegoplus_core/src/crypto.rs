@@ -1,5 +1,5 @@
-use aes_gcm::{Aes256Gcm, Nonce};
-use aes_gcm::aead::{Aead, KeyInit}; // bring the trait into scope
+use aes_gcm::{Aes256Gcm, KeyInit, aead::{Aead, Payload}, Nonce};
+
 use rand::RngCore;
 use scrypt::{Params, scrypt};
 use zeroize::Zeroizing;
@@ -11,6 +11,7 @@ pub struct Encrypted {
     pub ciphertext_and_tag: Vec<u8>, // ciphertext||tag
 }
 
+// --- Encrypt ---
 pub fn encrypt_aes_gcm_scrypt(plaintext: &[u8], passphrase: &[u8]) -> Result<Encrypted, StegoError> {
     // scrypt params roughly N=2^15, r=8, p=1, output len=32
     let params = Params::new(15, 8, 1, 32).map_err(|_| StegoError::ScryptFailed)?;
@@ -25,19 +26,22 @@ pub fn encrypt_aes_gcm_scrypt(plaintext: &[u8], passphrase: &[u8]) -> Result<Enc
 
     // cipher + random nonce
     let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new_from_slice(key_bytes.as_ref())
+        .map_err(|_| StegoError::CryptoInit)?;
 
     let mut nonce = [0u8;12];
     rand::thread_rng().fill_bytes(&mut nonce);
     let nonce_obj = Nonce::from_slice(&nonce);
 
     let aad = b"stego+v1";
-    let ct = cipher.encrypt(nonce_obj, aes_gcm::aead::Payload { msg: plaintext, aad })
-        .map_err(|_| StegoError::DecryptFailed)?; // reuse error type
+    let ct = cipher
+        .encrypt(nonce_obj, Payload { msg: plaintext, aad })
+        .map_err(|_| StegoError::EncryptFailed)?;
 
     Ok(Encrypted { salt, nonce, ciphertext_and_tag: ct })
 }
 
+// --- Decrypt ---
 pub fn decrypt_aes_gcm_scrypt(encrypted: &Encrypted, passphrase: &[u8]) -> Result<Vec<u8>, StegoError> {
     let params = Params::new(15, 8, 1, 32).map_err(|_| StegoError::ScryptFailed)?;
 
@@ -46,13 +50,18 @@ pub fn decrypt_aes_gcm_scrypt(encrypted: &Encrypted, passphrase: &[u8]) -> Resul
     scrypt(passphrase, &encrypted.salt, &params, &mut *key_bytes).map_err(|_| StegoError::ScryptFailed)?;
 
     let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new_from_slice(key_bytes.as_ref())
+        .map_err(|_| StegoError::DecryptFailed)?;
+
     let nonce_obj = Nonce::from_slice(&encrypted.nonce);
     let aad = b"stego+v1";
 
-    let pt = cipher.decrypt(nonce_obj, aes_gcm::aead::Payload {
-        msg: &encrypted.ciphertext_and_tag, aad
-    }).map_err(|_| StegoError::DecryptFailed)?;
+    let pt = cipher
+        .decrypt(nonce_obj, aes_gcm::aead::Payload {
+            msg: &encrypted.ciphertext_and_tag,
+            aad,
+        })
+        .map_err(|_| StegoError::DecryptFailed)?;
 
     Ok(pt)
 }

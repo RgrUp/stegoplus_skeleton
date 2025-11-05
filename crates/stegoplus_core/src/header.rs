@@ -1,3 +1,4 @@
+use aes_gcm::aes::cipher;
 use crc32fast::Hasher;
 
 pub const MAGIC: [u8;4] = *b"STG+";
@@ -13,8 +14,37 @@ pub struct Header {
     pub magic: [u8;4],
     pub version: u8,
     pub flags: u8,
+    pub cipher: u8,
     pub len: u32,
     pub crc32: u32,
+    pub payload_len: u64,
+    pub meta_crc32: u32,
+    pub nonce: [u8;12],
+    pub salt: [u8;16],
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cipher {
+    Aes256Gcm,
+    // Add other ciphers here if needed
+}
+
+impl Cipher {
+    pub const AES256_GCM: u8 = 0x01; // AES-256-GCM
+}
+
+// If you intended to use a Flags type, define it like this:
+#[derive(Debug, Clone, Copy)]
+pub struct Flags(pub u8);
+
+impl Flags {
+    pub const COMPRESSED: u8 = 0b0000_0010;
+    pub fn from_bits_truncate(bits: u8) -> u8 {
+        bits & 0b0000_0011 // only bits 0 and 1 are defined for now
+    }
+    pub fn bits(&self) -> u8 {
+        self.0
+    }
 }
 
 impl Header {
@@ -37,7 +67,26 @@ impl Header {
         let flags = buf[5];
         let len = u32::from_be_bytes(buf[6..10].try_into().ok()?);
         let crc32 = u32::from_be_bytes(buf[10..14].try_into().ok()?);
-        Some(Header { magic, version, flags, len, crc32 })
+
+        // Fields not encoded in the 14-byte header are set to sensible defaults.
+        let cipher: u8 = 0;
+        let payload_len: u64 = 0;
+        let meta_crc32: u32 = 0;
+        let nonce: [u8;12] = [0u8;12];
+        let salt: [u8;16] = [0u8;16];
+
+        Some(Header {
+            magic,
+            version,
+            flags,
+            cipher,
+            len,
+            crc32,
+            payload_len,
+            meta_crc32,
+            nonce,
+            salt,
+        })
     }
 
     pub fn crc32(data: &[u8]) -> u32 {
@@ -46,3 +95,10 @@ impl Header {
         hasher.finalize()
     }
 }
+impl cipher::KeySizeUser for Header {
+    type KeySize = cipher::consts::U16;
+}
+
+// If you intended to use a Flags type, define it like this:
+// #[derive(Debug, Clone, Copy)]
+// pub struct Flags(pub u8);

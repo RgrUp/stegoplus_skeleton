@@ -16,6 +16,10 @@ pub enum StegoError {
     ScryptFailed,
     #[error("Invalid input")]
     InvalidInput,
+    #[error("Crypto initialization failed")]
+    CryptoInit,
+    #[error("Encryption failed")]
+    EncryptFailed,
 }
 
 impl From<image::ImageError> for StegoError {

@@ -4,11 +4,12 @@ pub mod header;
 pub mod stego;
 pub mod errors;
 
-// Re-export commonly used functions and types
+// Re-export commonly used functions and types from crypto
 pub use crypto::{encrypt_aes_gcm_scrypt, decrypt_aes_gcm_scrypt, Encrypted};
-pub use stego::{
-    embed_payload_into_png,
-    extract_payload_from_png,
-    make_header_and_payload,
-    parse_header_and_payload,
-};
+
+/*
+ The stego module is exposed via `pub mod stego;` above.
+ Access stego functionality as `stegoplus_core::stego::...`.
+ Do not attempt to re-export individual stego functions here unless those
+ symbols actually exist in the `stego` module to avoid unresolved import errors.
+*/
