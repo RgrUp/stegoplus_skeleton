@@ -1,0 +1,450 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>StegoPlus</title>
+  <style>
+  :root{
+  --bg:#0b0b10;
+  --panel:#151520;
+  --panel2:#101018;
+  --text:#e5e7eb;
+  --muted:#a1a1aa;
+
+  --accent:#7c3aed;
+  --accent2:#a78bfa;
+
+  --hi: rgba(255,255,255,0.18);
+  --lo: rgba(0,0,0,0.65);
+}
+body[data-theme="light"]{
+  --bg:#f3f4f6;
+  --panel:#ffffff;
+  --panel2:#f7f7fb;
+  --text:#111827;
+  --muted:#4b5563;
+
+  --hi: rgba(255,255,255,0.95);
+  --lo: rgba(0,0,0,0.25);
+}
+
+/* Global */
+body{
+  font-family: "MS Sans Serif", Tahoma, Arial, sans-serif;
+  margin:0;
+  background:
+    radial-gradient(900px 600px at 20% 0%, rgba(124,58,237,0.16), transparent 55%),
+    radial-gradient(700px 500px at 80% 25%, rgba(167,139,250,0.10), transparent 60%),
+    var(--bg);
+  color: var(--text);
+}
+
+/* “Desktop” window frame */
+.desktop{
+  min-height:100vh;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:24px;
+}
+.window{
+  width: min(980px, 100%);
+  border: 2px solid var(--hi);
+  border-right-color: var(--lo);
+  border-bottom-color: var(--lo);
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  padding:10px;
+}
+
+/* Titlebar */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: left;  /* left block + right button */
+}
+
+.title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#themeToggle {
+}
+.app-icon{
+  width:16px; height:16px;
+  border: 2px solid rgba(255,255,255,0.28);
+  border-right-color: rgba(0,0,0,0.55);
+  border-bottom-color: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.25);
+  position:relative;
+}
+.app-icon:after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  border:1px dashed rgba(167,139,250,0.75);
+}
+.titletext{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.titlemeta{ font-weight:400; opacity:0.9; margin-left:8px; }
+
+.win-controls{ display:flex; gap:6px; }
+.win-btn{
+  width:18px; height:18px;
+  display:grid; place-items:center;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size:12px;
+  color:#fff;
+  background: rgba(0,0,0,0.18);
+  border: 2px solid var(--hi);
+  border-right-color: rgba(0,0,0,0.55);
+  border-bottom-color: rgba(0,0,0,0.55);
+  cursor:pointer;
+}
+.win-btn:active{
+  border: 2px solid rgba(0,0,0,0.55);
+  border-right-color: var(--hi);
+  border-bottom-color: var(--hi);
+}
+
+/* Headings */
+h1{ margin: 0 0 10px; font-size:18px; }
+h2{ margin: 0 0 10px; font-size:14px; }
+
+/* Cards become Win95 panels */
+.card{
+  border: 2px solid var(--hi);
+  border-right-color: var(--lo);
+  border-bottom-color: var(--lo);
+  background: rgba(255,255,255,0.03);
+  padding: 14px;
+  border-radius: 0;          /* win95 feel */
+  margin: 12px 0;
+}
+small{ color: var(--muted); }
+
+/* Labels + inputs */
+label{ display:block; margin: 10px 0 6px; font-weight: 600; color: var(--muted); font-size: 12px; }
+
+input, textarea{
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  color: var(--text);
+  background: rgba(0,0,0,0.20);
+  border: 2px solid var(--lo);
+  border-right-color: var(--hi);
+  border-bottom-color: var(--hi);
+  outline:none;
+  border-radius:0;
+  box-sizing: border-box;
+  height: 38px;
+}
+textarea{ box-sizing: border-box; height: 38px; min-height: 90px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* Buttons */
+button{
+  padding: 10px 14px;
+  margin-top: 10px;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(124,58,237,0.12);
+  border: 2px solid var(--hi);
+  border-right-color: var(--lo);
+  border-bottom-color: var(--lo);
+  border-radius:0;
+  height: 40px;
+  box-sizing: border-box;
+}
+button:active{
+  border: 2px solid var(--lo);
+  border-right-color: var(--hi);
+  border-bottom-color: var(--hi);
+}
+
+/* Layout helpers you already use */
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;   /* 👈 this fixes vertical alignment */
+  margin-top: 10px;
+}
+
+/* Output box */
+.out{
+  background: rgba(0,0,0,0.22);
+  padding:10px;
+  border-radius:0;
+  white-space:pre-wrap;
+  border: 2px solid var(--lo);
+  border-right-color: var(--hi);
+  border-bottom-color: var(--hi);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+  .devbar{
+  margin: 10px 0 14px;
+  padding: 8px 10px;
+  background: rgba(245,158,11,0.12);
+  border: 2px solid rgba(245,158,11,0.45);
+  color: rgba(245,158,11,0.95);
+}
+.headerbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+
+.theme-toggle{
+  padding:6px 10px;
+  font-size:12px;
+  cursor:pointer;
+  background: rgba(124,58,237,0.12);
+  color: var(--text);
+  border: 2px solid var(--hi);
+  border-right-color: var(--lo);
+  border-bottom-color: var(--lo);
+}
+.theme-toggle:active{
+  border: 2px solid var(--lo);
+  border-right-color: var(--hi);
+  border-bottom-color: var(--hi);
+}
+.file-row input {
+  flex: 1;
+  height: 38px;
+}
+
+.file-row button {
+  flex: 0 0 130px;  /* fixed width button */
+  height: 38px;
+}
+
+  </style>
+</head>
+<body>
+  <div class="desktop">
+  <div class="window">
+    <div class="titlebar">
+      <div class="title-left">
+        <div class="app-icon"></div>
+        <div class="titletext">StegoPlus <span class="titlemeta">DEV</span></div>
+  
+   <button id="themeToggle" type="button" class="theme-toggle">
+    Dark Mode
+  </button>
+      </div>
+    </div>
+  <h1></h1>
+  <div class="headerbar">
+  
+    <h1></h1>
+  
+</div>
+  <div class="devbar">DEV BUILD MARKER: C:\dev ✅</div>
+
+  <small>Encrypt + embed secrets into images. Reveal requires the same passphrase.</small>
+
+  <div class="card">
+    <h2>Analyze</h2>
+    <label>Cover image path</label>
+<div class="row">
+  <div class="row file-row">
+  <input id="an_cover" placeholder="Choose a cover image..." />
+  <button id="btnPickCover" class="browse-btn">Browse…</button>
+</div>
+</div>
+    <button id="btnAnalyze">Analyze Capacity</button>
+    <div id="an_out" class="out"></div>
+  </div>
+
+  <div class="card">
+    <h2>Hide (Encrypt + Embed)</h2>
+    <label>Cover image path</label>
+<div class="row">
+  <div class="row file-row">
+  <input id="h_cover" placeholder="Choose a cover image..." />
+  <button id="btnPickHideCover" class="browse-btn">Browse…</button>
+</div>
+</div>
+
+    <label>Passphrase</label>
+    <input id="h_pass" placeholder="Enter passphrase" />
+    <div class="row">
+  <div><button type="button" id="btnGenDice">Generate Dicephrase</button></div>
+  <div><button type="button" id="btnGenDice8">Generate 8 words</button></div>
+</div>
+<div class="row">
+  <div><button type="button" id="btnGenPw">Generate 28-char Password</button></div>
+  <div><button type="button" id="btnUsePwAsPass">Use as Passphrase</button></div>
+</div>
+
+    <label>Message (text)</label>
+    <textarea id="h_msg" placeholder="Type message to encrypt + embed..."></textarea>
+    <label>Output image path</label>
+<div class="row">
+  <div class="row file-row">
+  <input id="h_out" placeholder="e.g. C:\demo\output.png" />
+  <button type="button" id="btnPickHideOut" class="browse-btn">Browse…</button>
+</div>
+</div>
+    <button id="btnHide">Hide</button>
+    <div id="h_result" class="out"></div>
+  </div>
+
+  <div class="card">
+    <h2>Reveal (Extract + Decrypt)</h2>
+    <label>Stego image path</label>
+<div class="row">
+  <div class="row file-row">
+  <input id="r_stego" placeholder="Choose a stego image..." />
+  <button type="button" id="btnPickStego" class="browse-btn">Browse…</button>
+</div>
+</div>
+    <label>Passphrase</label>
+    <input id="r_pass" placeholder="Enter passphrase" />
+    <button id="btnReveal">Reveal</button>
+    <div id="r_out" class="out"></div>
+  </div>
+
+  <script>
+  //Debug Script checker
+  window.addEventListener("error", (e) => alert("JS error: " + e.message));
+  // Use Tauri global API (requires withGlobalTauri: true in tauri.conf.json)
+  const invoke = window.__TAURI__?.core?.invoke;
+
+  const $ = (id) => document.getElementById(id);
+
+  $("btnAnalyze").addEventListener("click", async () => {
+  $("an_out").textContent = "Working...";
+  try {
+    const res = await invoke("analyze_capacity", {
+      coverPath: $("an_cover").value
+    });
+    $("an_out").textContent = res;
+  } catch (e) {
+    $("an_out").textContent = "Error: " + (e?.toString?.() ?? e);
+  }
+});
+
+  $("btnPickCover").addEventListener("click", async () => {
+  try {
+    const p = await invoke("pick_png_or_bmp");
+    if (p) $("an_cover").value = p;
+  } catch (e) {
+    alert("Picker error: " + (e?.toString?.() ?? e));
+  }
+});
+  $("btnGenDice").addEventListener("click", async () => {
+  try {
+    const phrase = await invoke("generate_dicephrase", { words: 6 });
+    $("h_pass").value = phrase;
+    $("h_result").textContent = "Generated dicephrase ✅";
+  } catch (e) {
+    $("h_result").textContent = "Dicephrase error: " + (e?.toString?.() ?? e);
+  }
+});
+
+$("btnGenDice8").addEventListener("click", async () => {
+  try {
+    const phrase = await invoke("generate_dicephrase", { words: 8 });
+    $("h_pass").value = phrase;
+    $("h_result").textContent = "Generated 8-word dicephrase ✅";
+  } catch (e) {
+    $("h_result").textContent = "Dicephrase error: " + (e?.toString?.() ?? e);
+  }
+});
+
+  $("btnHide").addEventListener("click", async () => {
+    $("h_result").textContent = "Working...";
+    try {
+      const res = await invoke("hide_message", {
+        coverPath: $("h_cover").value,
+        passphrase: $("h_pass").value,
+        message: $("h_msg").value,
+        outPath: $("h_out").value
+      });
+      $("h_result").textContent = res;
+    } catch (e) {
+      $("h_result").textContent = "Error: " + (e?.toString?.() ?? e);
+    }
+  });
+  
+  $("btnGenPw").addEventListener("click", async () => {
+  try {
+    const pw = await invoke("generate_password");
+    $("h_msg").value = pw; // store password as the payload/message
+    $("h_result").textContent = "Generated password ✅ (embedded as message)";
+  } catch (e) {
+    $("h_result").textContent = "Password gen error: " + (e?.toString?.() ?? e);
+  }
+});
+
+// optional: lets you also set the passphrase to the generated password (not required)
+$("btnUsePwAsPass").addEventListener("click", () => {
+  $("h_pass").value = $("h_msg").value;
+  $("h_result").textContent = "Set passphrase = generated password ✅";
+});
+
+  $("btnPickHideCover").addEventListener("click", async () => {
+  $("h_result").textContent = "Opening file picker...";
+  try {
+    const p = await invoke("pick_png_or_bmp");
+    if (p) $("h_cover").value = p;
+    $("h_result").textContent = p ? "Selected cover ✅" : "Cancelled.";
+  } catch (e) {
+    $("h_result").textContent = "Picker error: " + (e?.toString?.() ?? e);
+  }
+});
+
+$("btnPickHideOut").addEventListener("click", async () => {
+  $("h_result").textContent = "Opening save dialog...";
+  try {
+    const p = await invoke("save_png");
+    if (p) $("h_out").value = p;
+    $("h_result").textContent = p ? "Output path set ✅" : "Cancelled.";
+  } catch (e) {
+    $("h_result").textContent = "Save dialog error: " + (e?.toString?.() ?? e);
+  }
+});
+  
+
+  $("btnPickStego").addEventListener("click", async () => {
+  $("r_out").textContent = "Opening file picker...";
+  try {
+    const p = await invoke("pick_png_or_bmp");
+    if (p) $("r_stego").value = p;
+    $("r_out").textContent = p ? "Selected stego image ✅" : "Cancelled.";
+  } catch (e) {
+    $("r_out").textContent = "Picker error: " + (e?.toString?.() ?? e);
+  }
+});
+
+  $("btnReveal").addEventListener("click", async () => {
+    $("r_out").textContent = "Working...";
+    try {
+      const res = await invoke("reveal_message", {
+        stegoPath: $("r_stego").value,
+        passphrase: $("r_pass").value
+      });
+      $("r_out").textContent = res;
+    } catch (e) {
+      $("r_out").textContent = "Error: " + (e?.toString?.() ?? e);
+    }
+  });
+  const toggleBtn = document.getElementById("themeToggle");
+
+// default theme
+document.body.dataset.theme = "dark";
+
+toggleBtn.addEventListener("click", () => {
+  const current = document.body.dataset.theme;
+  const next = current === "dark" ? "light" : "dark";
+  document.body.dataset.theme = next;
+
+  toggleBtn.textContent = next === "dark" ? "Dark Mode" : "Light Mode";
+});
+</script>
+  </div>
+</div>
+</body>
+</html>

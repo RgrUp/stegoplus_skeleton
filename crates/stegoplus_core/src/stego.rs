@@ -4,7 +4,7 @@ use image::Pixel;
 use std::path::Path;
 use crate::header::{Header, MAGIC, Flags, Cipher};
 use crate::crypto; // your encrypt/decrypt functions
-use zstd::stream::{encode_all, decode_all};
+use zstd::stream::encode_all;
 use std::fs;
 
 pub struct CoverAnalysis {
@@ -96,7 +96,7 @@ fn extract_bytes_from_rgba8(buf: &ImageBuffer<Rgba<u8>, Vec<u8>>, start_bytes: u
 
 /* ---------------- Encode/decode bit stream over image ---------------- */
 
-fn embed_bits_into_image(img: &mut DynamicImage, bits: &[u8]) -> Result<()> {
+fn _embed_bits_into_image(img: &mut DynamicImage, bits: &[u8]) -> Result<()> {
     // iterate pixels; for each pixel use R then B channel LSB
     let (w,h) = img.dimensions();
     let mut bit_idx = 0usize;
@@ -123,7 +123,7 @@ fn embed_bits_into_image(img: &mut DynamicImage, bits: &[u8]) -> Result<()> {
     anyhow::bail!("Not enough capacity in image");
 }
 
-fn extract_bytes_from_image(img: &image::DynamicImage, start_bytes: usize, length_bytes: usize) -> Vec<u8> {
+fn _extract_bytes_from_image(img: &image::DynamicImage, start_bytes: usize, length_bytes: usize) -> Vec<u8> {
     use image::GenericImageView;
     let (w, h) = img.dimensions();
     let start_bits = start_bytes * 8;
@@ -197,7 +197,7 @@ fn bytes_to_bits(data: &[u8]) -> Vec<u8> {
     bits
 }
 
-fn bits_to_bytes(bits: &[u8]) -> Vec<u8> {
+fn _bits_to_bytes(bits: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity((bits.len() + 7) / 8);
     let mut cur: u8 = 0;
     for (i, &b) in bits.iter().enumerate() {

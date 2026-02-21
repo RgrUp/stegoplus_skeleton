@@ -25,7 +25,7 @@ pub fn encrypt_aes_gcm_scrypt(plaintext: &[u8], passphrase: &[u8]) -> Result<Enc
     scrypt(passphrase, &salt, &params, &mut *key_bytes).map_err(|_| StegoError::ScryptFailed)?;
 
     // cipher + random nonce
-    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
+    let _key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
     let cipher = Aes256Gcm::new_from_slice(key_bytes.as_ref())
         .map_err(|_| StegoError::CryptoInit)?;
 
@@ -49,7 +49,7 @@ pub fn decrypt_aes_gcm_scrypt(encrypted: &Encrypted, passphrase: &[u8]) -> Resul
     let mut key_bytes = Zeroizing::new([0u8;32]);
     scrypt(passphrase, &encrypted.salt, &params, &mut *key_bytes).map_err(|_| StegoError::ScryptFailed)?;
 
-    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
+    let _key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes[..]);
     let cipher = Aes256Gcm::new_from_slice(key_bytes.as_ref())
         .map_err(|_| StegoError::DecryptFailed)?;
 

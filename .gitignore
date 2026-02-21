@@ -1,0 +1,62 @@
+# =============================
+# Rust
+# =============================
+/target
+**/target
+Cargo.lock.bak
+*.rs.bk
+*.pdb
+*.rlib
+*.dll
+*.exe
+
+# =============================
+# Node / Frontend
+# =============================
+node_modules
+**/node_modules
+
+# If your "dist/" is build output (not source), ignore it.
+# If it's your committed static UI source, REMOVE these two lines.
+
+
+# =============================
+# Tauri Bundles / Installers
+# =============================
+**/bundle
+**/*.msi
+**/*.exe
+
+# =============================
+# Tauri Generated Files
+# =============================
+apps/stegoplus_desktop/src-tauri/gen
+apps/stegoplus_desktop/src-tauri/target
+
+# =============================
+# Environment / Secrets
+# =============================
+.env
+**/.env
+*.key
+*.pem
+*.secret
+
+# =============================
+# Logs
+# =============================
+*.log
+
+# =============================
+# OS / Editor
+# =============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =============================
+# Backup / Temp
+# =============================
+*.bak
+src.bak

@@ -1,0 +1,623 @@
+<!-- StegoPlus — “Retro Gov Utility (Win95) with Covert Purple Undertones”
+     Drop this into your Tauri/desktop frontend (plain HTML/CSS/JS).
+     No frameworks. No external assets. Pure HTML + CSS + tiny JS.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StegoPlus</title>
+
+  <style>
+    /* -----------------------------
+       Theme: Win95 structure + Option B palette
+       ----------------------------- */
+    :root{
+      --bg: #0b0b10;
+      --desk: #0b0b10;
+      --panel: #151520;
+      --panel2:#101018;
+      --text: #e5e7eb;
+      --muted:#a1a1aa;
+
+      --accent: #7c3aed;   /* purple */
+      --accent2: #a78bfa;  /* light purple */
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+
+      /* Win95 bevel colors (tuned for dark palette) */
+      --hi: rgba(255,255,255,0.18); /* highlight edge */
+      --lo: rgba(0,0,0,0.65);       /* shadow edge */
+      --mid: rgba(255,255,255,0.08);
+
+      --focus: rgba(167,139,250,0.65);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --ui: "MS Sans Serif", Tahoma, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin:0;
+      background: radial-gradient(900px 600px at 20% 0%, rgba(124,58,237,0.16), transparent 55%),
+                  radial-gradient(700px 500px at 80% 25%, rgba(167,139,250,0.10), transparent 60%),
+                  var(--desk);
+      color: var(--text);
+      font-family: var(--ui);
+      letter-spacing: 0.1px;
+    }
+
+    /* -----------------------------
+       Win95 beveled primitives
+       ----------------------------- */
+    .bevel-raised{
+      border: 2px solid var(--hi);
+      border-right-color: var(--lo);
+      border-bottom-color: var(--lo);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+    }
+    .bevel-inset{
+      border: 2px solid var(--lo);
+      border-right-color: var(--hi);
+      border-bottom-color: var(--hi);
+      background: rgba(0,0,0,0.22);
+    }
+    .hairline{
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* -----------------------------
+       App window
+       ----------------------------- */
+    .desktop{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .window{
+      width: min(980px, 100%);
+      height: min(640px, 100%);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:10px;
+      position:relative;
+    }
+
+    /* Title bar */
+    .titlebar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:6px 8px;
+      background: linear-gradient(90deg, rgba(124,58,237,0.95), rgba(124,58,237,0.65));
+      border: 2px solid rgba(255,255,255,0.20);
+      border-right-color: rgba(0,0,0,0.55);
+      border-bottom-color: rgba(0,0,0,0.55);
+      user-select:none;
+    }
+    .title-left{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width: 0;
+    }
+    .app-icon{
+      width:16px;
+      height:16px;
+      border: 2px solid rgba(255,255,255,0.28);
+      border-right-color: rgba(0,0,0,0.55);
+      border-bottom-color: rgba(0,0,0,0.55);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18), transparent 60%),
+        rgba(0,0,0,0.25);
+      position:relative;
+    }
+    .app-icon:after{
+      content:"";
+      position:absolute;
+      inset:3px;
+      border:1px dashed rgba(167,139,250,0.75);
+    }
+    .titletext{
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .titlemeta{
+      font-weight:400;
+      opacity:0.85;
+      margin-left:8px;
+      color: rgba(255,255,255,0.92);
+    }
+    .win-controls{
+      display:flex;
+      gap:6px;
+    }
+    .win-btn{
+      width:18px;
+      height:18px;
+      display:grid;
+      place-items:center;
+      font-family: var(--mono);
+      font-size:12px;
+      color: rgba(255,255,255,0.95);
+      background: rgba(0,0,0,0.18);
+      border: 2px solid rgba(255,255,255,0.18);
+      border-right-color: rgba(0,0,0,0.55);
+      border-bottom-color: rgba(0,0,0,0.55);
+      cursor:pointer;
+    }
+    .win-btn:active{
+      border: 2px solid rgba(0,0,0,0.55);
+      border-right-color: rgba(255,255,255,0.18);
+      border-bottom-color: rgba(255,255,255,0.18);
+    }
+
+    /* Content layout */
+    .content{
+      flex:1;
+      display:grid;
+      grid-template-columns: 230px 1fr;
+      gap:10px;
+      min-height:0;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:10px;
+      min-height:0;
+    }
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .navbtn{
+      text-align:left;
+      padding:8px 10px;
+      color: var(--text);
+      cursor:pointer;
+      background: rgba(255,255,255,0.03);
+      border: 2px solid var(--hi);
+      border-right-color: var(--lo);
+      border-bottom-color: var(--lo);
+    }
+    .navbtn:active{
+      border: 2px solid var(--lo);
+      border-right-color: var(--hi);
+      border-bottom-color: var(--hi);
+    }
+    .navbtn[aria-selected="true"]{
+      outline: 2px dotted var(--focus);
+      outline-offset: 2px;
+      background: rgba(124,58,237,0.14);
+    }
+
+    .sysbox{
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:0;
+    }
+    .labelrow{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      color: var(--muted);
+      font-size:12px;
+    }
+    .badge{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      font-size:12px;
+    }
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background: var(--accent2);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+    }
+    .dot.ok{ background: var(--ok); }
+    .dot.warn{ background: var(--warn); }
+    .dot.bad{ background: var(--bad); }
+
+    /* Main panel */
+    .main{
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:0;
+    }
+    .toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px;
+    }
+    .toolbar h1{
+      margin:0;
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:0.2px;
+    }
+    .toolbar small{
+      color: var(--muted);
+      font-size:12px;
+    }
+
+    .panel{
+      flex:1;
+      padding:12px;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    /* Form grid */
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .field label{
+      font-size:12px;
+      color: var(--muted);
+    }
+    .input, select, textarea{
+      width:100%;
+      padding:8px 10px;
+      color: var(--text);
+      background: rgba(0,0,0,0.20);
+      border: 2px solid var(--lo);
+      border-right-color: var(--hi);
+      border-bottom-color: var(--hi);
+      outline:none;
+      font-family: var(--ui);
+      font-size:13px;
+    }
+    textarea{ min-height:88px; resize: vertical; font-family: var(--mono); }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    /* Buttons */
+    .btn{
+      padding:8px 10px;
+      color: var(--text);
+      cursor:pointer;
+      background: rgba(255,255,255,0.03);
+      border: 2px solid var(--hi);
+      border-right-color: var(--lo);
+      border-bottom-color: var(--lo);
+      font-family: var(--ui);
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .btn:active{
+      border: 2px solid var(--lo);
+      border-right-color: var(--hi);
+      border-bottom-color: var(--hi);
+    }
+    .btn.primary{
+      background: rgba(124,58,237,0.16);
+    }
+    .btn.danger{
+      background: rgba(239,68,68,0.10);
+    }
+    .btn:disabled{
+      opacity:0.55;
+      cursor:not-allowed;
+    }
+
+    /* Result console */
+    .console{
+      padding:10px;
+      min-height:120px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-family: var(--mono);
+      font-size:12px;
+      color: rgba(229,231,235,0.92);
+      overflow:auto;
+      line-height:1.35;
+      background:
+        radial-gradient(400px 180px at 15% 0%, rgba(124,58,237,0.10), transparent 60%),
+        rgba(0,0,0,0.22);
+    }
+    .line-muted{ color: rgba(161,161,170,0.95); }
+    .line-ok{ color: rgba(16,185,129,0.95); }
+    .line-warn{ color: rgba(245,158,11,0.95); }
+    .line-bad{ color: rgba(239,68,68,0.95); }
+
+    /* Footer */
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      color: var(--muted);
+      font-size:12px;
+    }
+    .kbd{
+      font-family: var(--mono);
+      font-size:11px;
+      padding:2px 6px;
+      border: 2px solid var(--hi);
+      border-right-color: var(--lo);
+      border-bottom-color: var(--lo);
+      background: rgba(255,255,255,0.03);
+    }
+
+  /* Responsive */
+  @media (max-width: 840px){
+    .content{ grid-template-columns: 1fr; }
+    .grid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="window bevel-raised" id="window">
+      <!-- Title Bar -->
+      <div class="titlebar" id="titlebar">
+        <div class="title-left">
+          <div class="app-icon" aria-hidden="true"></div>
+          <div class="titletext">
+            StegoPlus <span class="titlemeta">v0.1.0 • Secure Concealment Utility</span>
+            </div>
+          </div>
+        <div class="win-controls">
+          <button class="win-btn" title="Minimize" aria-label="Minimize">_</button>
+          <button class="win-btn" title="Maximize" aria-label="Maximize">□</button>
+          <button class="win-btn" title="Close" aria-label="Close">×</button>
+        </div>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="content">
+        <!-- Sidebar -->
+        <aside class="sidebar bevel-raised">
+          <nav class="nav" aria-label="Navigation">
+            <button class="navbtn" aria-selected="true" data-view="embed">Embed</button>
+            <button class="navbtn" aria-selected="false" data-view="extract">Extract</button>
+            <button class="navbtn" aria-selected="false" data-view="settings">Settings</button>
+            <button class="navbtn" aria-selected="false" data-view="about">About</button>
+          </nav>
+
+          <div class="sysbox bevel-inset">
+            <div class="labelrow">
+              <span>Status</span>
+              <span id="statusText">READY</span>
+            </div>
+            <div class="badge bevel-raised" style="gap:10px;">
+              <span class="dot ok" id="statusDot"></span>
+              <span id="statusMsg">Standing by.</span>
+            </div>
+
+            <div class="labelrow" style="margin-top:6px;">
+              <span>Mode</span>
+              <span id="modeText">EMBED</span>
+            </div>
+            <div class="badge bevel-inset">
+              <span class="dot" style="background: var(--accent2);"></span>
+              <span>Win95 UI • Hidden Layer Palette</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main bevel-raised">
+          <div class="toolbar bevel-raised">
+            <div>
+              <h1 id="viewTitle">EMBED • Conceal a Payload</h1>
+              <small id="viewSubtitle">Encrypt → Embed into PNG (capacity checks enforced).</small>
+            </div>
+            <div class="row">
+              <button class="btn" id="btnReset">Reset</button>
+              <button class="btn primary" id="btnRun">Run</button>
+            </div>
+          </div>
+
+          <section class="panel bevel-inset">
+            <!-- EMBED VIEW -->
+            <div id="viewEmbed">
+              <div class="grid">
+                <div class="field">
+                  <label>Cover Image (PNG)</label>
+                  <div class="row">
+                    <input class="input" id="embedCover" placeholder="Select cover image..." />
+                    <button class="btn" id="btnBrowseCover">Browse</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>Payload (file or text)</label>
+                  <div class="row">
+                    <input class="input" id="embedPayload" placeholder="Select payload..." />
+                    <button class="btn" id="btnBrowsePayload">Browse</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>Password / Dicewords</label>
+                  <input class="input" id="embedPassword" type="password" placeholder="28+ chars or dicewords..." />
+                </div>
+
+                <div class="field">
+                  <label>Output Location</label>
+                  <div class="row">
+                    <input class="input" id="embedOutput" placeholder="Where to save stego image..." />
+                    <button class="btn" id="btnBrowseOutput">Browse</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Optional Notes (not embedded; local only)</label>
+                <textarea class="input" id="embedNotes" placeholder="Case notes / reminder text (local)..."></textarea>
+              </div>
+
+              <div class="row" style="justify-content:space-between;">
+                <div class="row" style="gap:8px;">
+                  <button class="btn" id="btnCapacity">Check Capacity</button>
+                  <span class="badge bevel-inset" id="capacityBadge">
+                    Capacity: <span style="margin-left:6px;" class="line-muted" id="capacityText">—</span>
+                  </span>
+                </div>
+                <div class="row" style="gap:8px;">
+                  <button class="btn" id="btnGeneratePass">Generate Dicewords</button>
+                  <button class="btn" id="btnCopyDice">Copy Dicewords</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- EXTRACT VIEW -->
+            <div id="viewExtract" style="display:none;">
+              <div class="grid">
+                <div class="field">
+                  <label>Stego Image (PNG)</label>
+                  <div class="row">
+                    <input class="input" id="extractImage" placeholder="Select stego image..." />
+                    <button class="btn" id="btnBrowseStego">Browse</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>Password / Dicewords</label>
+                  <input class="input" id="extractPassword" type="password" placeholder="Enter password/dicewords..." />
+                </div>
+
+                <div class="field">
+                  <label>Output (save extracted payload)</label>
+                  <div class="row">
+                    <input class="input" id="extractOutput" placeholder="Where to save extracted file/text..." />
+                    <button class="btn" id="btnBrowseExtractOut">Browse</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>Decrypted Output</label>
+                  <div class="row">
+                    <input class="input" id="extractPreview" placeholder="(masked by default)" type="password" />
+                    <button class="btn" id="btnReveal">Reveal</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row" style="justify-content:flex-end; gap:8px;">
+                <button class="btn primary" id="btnCopyClipboard">Copy to Clipboard</button>
+                <button class="btn danger" id="btnClearClipboard">Clear Clipboard</button>
+              </div>
+
+              <div class="badge bevel-inset" style="margin-top:6px;">
+                Clipboard auto-clear: <span class="line-muted" id="clipTimer">30s</span>
+              </div>
+            </div>
+
+            <!-- SETTINGS VIEW -->
+            <div id="viewSettings" style="display:none;">
+              <div class="grid">
+                <div class="field">
+                  <label>Clipboard Auto-Clear</label>
+                  <select class="input" id="settingClipClear">
+                    <option value="15">15 seconds</option>
+                    <option value="30" selected>30 seconds</option>
+                    <option value="60">60 seconds</option>
+                    <option value="0">Off</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Diagnostics</label>
+                  <select class="input" id="settingDiag">
+                    <option value="off" selected>Off (recommended)</option>
+                    <option value="on">On</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Reveal Timeout</label>
+                  <select class="input" id="settingReveal">
+                    <option value="3" selected>3 seconds</option>
+                    <option value="5">5 seconds</option>
+                    <option value="0">No timeout</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Theme</label>
+                  <select class="input" id="settingTheme">
+                    <option value="hybrid" selected>Win95 + Hidden Layer (Hybrid)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="badge bevel-inset" style="margin-top:10px;">
+                Tip: Keep diagnostics OFF for demos to avoid leaking plaintext into logs.
+              </div>
+            </div>
+
+            <!-- ABOUT VIEW -->
+            <div id="viewAbout" style="display:none;">
+              <div class="badge bevel-raised" style="margin-bottom:10px;">
+                <span class="dot" style="background: var(--accent2);"></span>
+                StegoPlus • cover & concealment for encrypted payloads
+              </div>
+
+              <div class="console bevel-inset" aria-label="About text">
+                <div class="line-muted">Mission:</div>
+                <div>Keep secrets off the keyboard and out of memory—decrypt only when needed.</div>
+                <div class="line-muted" style="margin-top:8px;">Threat model notes:</div>
+                <div>• Clipboard avoids basic keystroke logging (typing capture).</div>
+                <div>• Auto-clear reduces clipboard persistence risk.</div>
+                <div>• A fully compromised host defeats most userland defenses.</div>
+                <div class="line-muted" style="margin-top:8px;">Build:</div>
+                <div>Rust core • Desktop UI • v0.1.0</div>
+              </div>
+            </div>
+
+            <!-- Console / Log -->
+            <div class="console bevel-inset" id="console" aria-label="Console output">
+              <div class="line-muted">[system] boot: ui ready</div>
+              <div class="line-muted">[hint] use Embed / Extract on the left</div>
+            </div>
+          </section>
+
+          <div class="footer bevel-raised">
+            <div>
+              <span class="kbd">Ctrl</span> + <span class="kbd">V</span> paste •
+              <span class="kbd">Enter</span> run
+            </div>
+            <div>StegoPlus • “Retro Gov Utility” skin</div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>

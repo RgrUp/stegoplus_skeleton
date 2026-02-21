@@ -3,4 +3,7 @@ members = [
     "crates/stegoplus_core",
     "apps/stegoplus_cli"
 ]
+exclude = [
+    "apps/stegoplus_desktop/src-tauri"
+]
 resolver = "2"
