@@ -40,7 +40,7 @@ npm install
 
 npm run tauri dev
 
-### 6) Build Release + Generate Installer (MSI)
+### 6) Build Release + Generate Installer (MSI + NSIS)
 
 npm run tauri build
 
@@ -74,8 +74,6 @@ npm run tauri build
 
 ## 2) “Release build artifacts”
 
-### Release Artifacts
-
-- MSI installer: `.../bundle/msi/`
-- Executable: `.../target/release/`
-
+Release artifacts are located in:
+- bundle/msi/
+- bundle/nsis/

@@ -1,15 +1,23 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, time::Duration,sync::Mutex};
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
+use tauri::State;
 use std::sync::mpsc;
 use once_cell::sync::Lazy;
-use rand::{rngs::OsRng, Rng};
+use rand::{ rngs::OsRng, Rng};
 use std::collections::HashMap;
-
+use arboard::Clipboard;
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
+use zeroize::Zeroize;
+
+#[derive(Default)]
+struct AppSecrets {
+    last_password: Mutex<Option<String>>,
+    last_revealed: Mutex<Option<String>>,
+}
 
 #[tauri::command]
 fn ping() -> String {
@@ -61,7 +69,11 @@ fn hide_message(
 }
 
 #[tauri::command]
-fn reveal_message(stego_path: String, passphrase: String) -> Result<String, String> {
+fn reveal_message(
+    stego_path: String,
+    passphrase: String,
+    secrets: State<AppSecrets>,
+) -> Result<String, String> {
     println!("[tauri] reveal_message: stego={stego_path}");
 
     let stego = PathBuf::from(&stego_path);
@@ -75,10 +87,18 @@ fn reveal_message(stego_path: String, passphrase: String) -> Result<String, Stri
     let bytes = fs::read(&out).map_err(|e| format!("read revealed failed: {e}"))?;
     let _ = fs::remove_file(&out);
 
-    match String::from_utf8(bytes) {
-        Ok(s) => Ok(s),
-        Err(e) => Ok(format!("[non-UTF8 output; base64]\n{}", B64.encode(e.into_bytes()))),
-    }
+    let output = match String::from_utf8(bytes) {
+    Ok(s) => s,
+    Err(e) => format!("[non-UTF8 output; base64]\n{}", B64.encode(e.into_bytes())),
+};
+
+// store for copy button
+*secrets
+    .last_revealed
+    .lock()
+    .map_err(|_| "Mutex poisoned")? = Some(output.clone());
+
+Ok(output)
 }
 
 #[tauri::command]
@@ -185,27 +205,113 @@ fn generate_dicephrase(words: Option<u8>) -> Result<String, String> {
     Ok(out.join(" "))
 }
 
-#[tauri::command]
-fn generate_password() -> Result<String, String> {
-    const LEN: usize = 28;
+const PW_LEN: usize = 28;
+const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_-+=";
 
-    // Good default charset: strong + URL/file friendly-ish (no quotes/spaces)
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~!@#$%^&*+=";
-
+fn gen_pw_28() -> String {
     let mut rng = OsRng;
-    let mut out = String::with_capacity(LEN);
+    (0..PW_LEN)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
 
-    for _ in 0..LEN {
-        let idx = rng.gen_range(0..CHARS.len());
-        out.push(CHARS[idx] as char);
+#[tauri::command]
+fn generate_password(secrets: State<AppSecrets>) -> Result<String, String> {
+    let pw = gen_pw_28();
+
+    *secrets.last_password.lock().map_err(|_| "Mutex poisoned")? = Some(pw.clone());
+
+    Ok(pw)
+}
+
+#[tauri::command]
+fn copy_last_password(secrets: State<AppSecrets>, ttl_ms: Option<u64>) -> Result<(), String> {
+    let pw = {
+        let guard = secrets.last_password.lock().map_err(|_| "Mutex poisoned")?;
+        guard.clone().ok_or("No password generated yet")?
+    };
+
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard.set_text(pw.clone()).map_err(|e| e.to_string())?;
+
+    let ttl = ttl_ms.unwrap_or(15_000);
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(ttl));
+        if let Ok(mut cb) = Clipboard::new() {
+            if let Ok(current) = cb.get_text() {
+                if current == pw {
+                    let _ = cb.set_text(String::new());
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+fn copy_last_revealed(secrets: State<AppSecrets>, ttl_ms: Option<u64>) -> Result<(), String> {
+    let text = {
+        let guard = secrets.last_revealed.lock().map_err(|_| "Mutex poisoned")?;
+        guard.clone().ok_or("Nothing revealed yet")?
+    };
+
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard.set_text(text.clone()).map_err(|e| e.to_string())?;
+
+    let ttl = ttl_ms.unwrap_or(15_000);
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(ttl));
+        if let Ok(mut cb) = Clipboard::new() {
+            if let Ok(current) = cb.get_text() {
+                if current == text {
+                    let _ = cb.set_text(String::new());
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+fn copy_to_clipboard(text: String) -> Result<(), String> {
+    let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard.set_text(text).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn zeroize_secrets(secrets: State<AppSecrets>) -> Result<String, String> {
+    // Wipe stored password
+    if let Some(mut pw) = secrets
+        .last_password
+        .lock()
+        .map_err(|_| "Mutex poisoned")?
+        .take()
+    {
+        pw.zeroize();
     }
 
-    Ok(out)
+    // Wipe revealed message
+    if let Some(mut r) = secrets
+        .last_revealed
+        .lock()
+        .map_err(|_| "Mutex poisoned")?
+        .take()
+    {
+        r.zeroize();
+    }
+
+    Ok("Secrets zeroized ✅".into())
 }
 
 fn main() {
     tauri::Builder::default()
-        
+        .manage(AppSecrets::default())
         .plugin(tauri_plugin_dialog::init())
 
         // 👇 PUT THE SETUP BLOCK RIGHT HERE
@@ -249,7 +355,11 @@ fn main() {
             hide_message,
             reveal_message,
             generate_dicephrase,
-            generate_password
+            generate_password,
+            copy_to_clipboard,
+            copy_last_password,
+            copy_last_revealed,
+            zeroize_secrets
 ])
 
 

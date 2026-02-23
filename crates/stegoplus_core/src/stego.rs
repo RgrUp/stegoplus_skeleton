@@ -7,6 +7,14 @@ use crate::crypto; // your encrypt/decrypt functions
 use zstd::stream::encode_all;
 use std::fs;
 
+macro_rules! dprintln {
+    ($($arg:tt)*) => {
+        if cfg!(debug_assertions) {
+            println!($($arg)*);
+        }
+    };
+}
+
 pub struct CoverAnalysis {
     pub pixels: u64,
     pub bits_per_pixel_used: u8, // using 2 bits (R,B)
@@ -264,11 +272,11 @@ pub fn hide_file(
 
     let header_bytes = header.to_bytes();
 
-    eprintln!("HIDE payload len: {}", payload_after_comp.len());
-    eprintln!("HIDE header_bytes.len = {}", header_bytes.len());
-    eprintln!("HIDE nonce: {:02x?}", enc.nonce);
-    eprintln!("HIDE  salt: {:02x?}", enc.salt);
-    eprintln!("HIDE  ct+tag len: {}", enc.ciphertext_and_tag.len());
+dprintln!("HIDE payload len: {}", payload_after_comp.len());
+dprintln!("HIDE header_bytes.len = {}", header_bytes.len());
+dprintln!("HIDE nonce: {:02x?}", enc.nonce);
+dprintln!("HIDE  salt: {:02x?}", enc.salt);
+dprintln!("HIDE  ct+tag len: {}", enc.ciphertext_and_tag.len());
 
     // compute capacity
     // capacity check still based on width*height*2 bits:
@@ -326,9 +334,9 @@ pub fn reveal_file(
     let ct    =  extract_bytes_from_rgba8(&rgba, HEADER_BYTES + NONCE_BYTES + SALT_BYTES, ct_len);
 
     // (optional) debug to confirm match
-    eprintln!("REVEAL nonce: {:02x?}", nonce);
-    eprintln!("REVEAL  salt: {:02x?}", salt);
-    eprintln!("REVEAL  ct+tag len: {}", ct.len());
+    dprintln!("REVEAL nonce: {:02x?}", nonce);
+    dprintln!("REVEAL  salt: {:02x?}", salt);
+    dprintln!("REVEAL  ct+tag len: {}", ct.len());
 
     // 3) Decrypt
     let encrypted = crate::crypto::Encrypted { nonce, salt, ciphertext_and_tag: ct };

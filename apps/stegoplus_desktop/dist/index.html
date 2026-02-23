@@ -227,7 +227,7 @@ button:active{
     <div class="titlebar">
       <div class="title-left">
         <div class="app-icon"></div>
-        <div class="titletext">StegoPlus <span class="titlemeta">DEV</span></div>
+        <div class="titletext">StegoPlus <span class="titlemeta">v1.0.1</span></div>
   
    <button id="themeToggle" type="button" class="theme-toggle">
     Dark Mode
@@ -240,7 +240,7 @@ button:active{
     <h1></h1>
   
 </div>
-  <div class="devbar">DEV BUILD MARKER: C:\dev ✅</div>
+  <!-- <div class="devbar">DEV BUILD MARKER: C:\dev ✅</div> -->
 
   <small>Encrypt + embed secrets into images. Reveal requires the same passphrase.</small>
 
@@ -275,6 +275,7 @@ button:active{
 </div>
 <div class="row">
   <div><button type="button" id="btnGenPw">Generate 28-char Password</button></div>
+  <div><button id="btnCopyPw">Copy Password</button></div>
   <div><button type="button" id="btnUsePwAsPass">Use as Passphrase</button></div>
 </div>
 
@@ -303,7 +304,16 @@ button:active{
     <label>Passphrase</label>
     <input id="r_pass" placeholder="Enter passphrase" />
     <button id="btnReveal">Reveal</button>
+    <button id="btnCopyReveal">Copy Revealed</button>
     <div id="r_out" class="out"></div>
+  </div>
+  <div>
+    <button id="btnZeroize">Secure Clear</button>
+  </div>
+  <div class="card">
+     <h2>About</h2>
+     <p>StegoPlus v1.0.1 (2026-02-23)</p>
+     <p>Created by Kevin Dunton</p>
   </div>
 
   <script>
@@ -432,6 +442,35 @@ $("btnPickHideOut").addEventListener("click", async () => {
     }
   });
   const toggleBtn = document.getElementById("themeToggle");
+
+  $("btnCopyPw").addEventListener("click", async () => {
+  try {
+    // Copies the last-generated password stored in Rust
+    await invoke("copy_last_password", { ttl_ms: 15000 });
+    $("h_result").textContent = "Copied to clipboard ✅ (auto-clears in 15s)";
+  } catch (e) {
+    $("h_result").textContent = "Copy error: " + (e?.toString?.() ?? e);
+  }
+});
+
+$("btnCopyReveal").addEventListener("click", async () => {
+  try {
+    await invoke("copy_last_revealed", { ttl_ms: 15000 });
+    $("r_out").textContent = "Copied revealed output ✅ (auto-clears in 15s)";
+  } catch (e) {
+    $("r_out").textContent = "Copy error: " + (e?.toString?.() ?? e);
+  }
+});
+
+$("btnZeroize").addEventListener("click", async () => {
+  try {
+    const res = await invoke("zeroize_secrets");
+    $("h_result").textContent = res;
+    $("r_out").textContent = res;
+  } catch (e) {
+    $("h_result").textContent = "Zeroize error: " + (e?.toString?.() ?? e);
+  }
+});
 
 // default theme
 document.body.dataset.theme = "dark";
